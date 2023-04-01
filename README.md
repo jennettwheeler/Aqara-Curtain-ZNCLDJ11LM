@@ -16,6 +16,7 @@ See my yaml file for an example config.
 - Better error checking states
 - One button calibrate (full open-close cycle)
 - Consistent code-style (sorry)
+- Look into avoiding "custom" components - as per https://gitlab.com/ripnetuk-public/esphome/ripnetuk-esphome-easynow
 
 ## Credits
 For having already decoded the uart protocol:

@@ -77,7 +77,7 @@ class AqaraCurtainComponent : public Component, public UARTDevice, public Cover 
       send_message({0x01, 0x03, 0x01}); // Request Direction
     } else if (!init_status_known) {
       send_message({0x01, 0x05, 0x01}); // Request Status
-    } else if (!init_pos_known) {
+    } else if (!init_pos_known && init_cal_known && cal_sensor->state) {
       send_message({0x01, 0x02, 0x01}); // Request Position
     }
   }
@@ -135,6 +135,33 @@ class AqaraCurtainComponent : public Component, public UARTDevice, public Cover 
         break;
     }
     moving_due_to_sw_trigger = false;
+    init_status_known = true;
+  }
+  
+  void set_position(uint8_t value) {
+    if (value == 0xff) {
+        position = 0.5f;
+    } else {
+        if (value < 3) {
+            position = COVER_CLOSED;
+        } else if (value > 97) {
+            position = COVER_OPEN;
+        } else {
+            position = value / 100.0f;
+        }
+        init_pos_known = true;
+    }
+  }
+
+  void set_calibration(bool value) {
+    if (!value) position = 0.5f;
+    cal_sensor->publish_state(value);
+    init_cal_known = true;
+  }
+
+  void set_direction(bool reversed) {
+    direction_switch->update_state(reversed);
+    init_dir_known = true;
   }
 
   void readByte(uint8_t data) {
@@ -143,32 +170,25 @@ class AqaraCurtainComponent : public Component, public UARTDevice, public Cover 
       if (offset > 6) {
         if (MODBUS_CRC16_v3(buffer, offset) == 0x0000) {
           if (offset >= 14 && buffer[3] == 0x04 && buffer[4] == 0x02 && buffer[5] == 0x08) {
-            position = buffer[6] / 100.0f;
-            direction_switch->update_state(buffer[7]);
+            set_position(buffer[6]);
+            set_direction(buffer[7]);
             set_status(buffer[9]);
-            cal_sensor->publish_state(buffer[13]);
+            set_calibration(buffer[13]);
           }
           if (offset >= 9 && buffer[3] == 0x01 && buffer[5] == 0x01) // Answers
           {
             switch (buffer[4]) {
               case 0x02: // position
-                if (buffer[6] != 0xff)
-                {
-                  position = buffer[6] / 100.0f;
-                }
-                init_pos_known = true;
+                set_position(buffer[6]);
                 break;
               case 0x03: // direction
-                direction_switch->update_state(buffer[6]);
-                init_dir_known = true;
+                set_direction(buffer[6]);
                 break;
               case 0x05: // status
                 set_status(buffer[6]);
-                init_status_known = true;
                 break;
               case 0x09: // calibration
-                cal_sensor->publish_state(buffer[6]);
-                init_cal_known = true;
+                set_calibration(buffer[6]);
                 break;
               default:
                 break;
