@@ -1,0 +1,90 @@
+esphome:
+  name: aqara-curtain-motor
+  friendly_name: "Aqara Curtain Motor"
+  platform: ESP32
+  board: wt32-eth01
+  includes:
+    - aqara_curtain_motor.h
+
+# Enable logging
+logger:
+  level: VERBOSE #makes uart stream available in esphome logstream
+  baud_rate: 0 #disable logging over uart
+
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "<your-api-key>"
+
+ota:
+  password: "<your-ota-key>"
+
+ethernet:
+  type: LAN8720
+  mdc_pin: GPIO23
+  mdio_pin: GPIO18
+  clk_mode: GPIO0_IN
+  phy_addr: 1
+  power_pin: GPIO16
+
+# wifi:
+#   ssid: !secret wifi_ssid
+#   password: !secret wifi_password
+#   fast_connect: True
+
+uart:
+  id: uart_bus
+  rx_pin: GPIO05  # Change this!
+  tx_pin: GPIO17  # Change this!
+  baud_rate: 9600
+
+
+custom_component:
+  - id: curtain_component
+    lambda: |-
+      auto curtain_component = new AqaraCurtainComponent(id(uart_bus));
+      return {curtain_component};
+
+
+cover:
+  - platform: custom
+    lambda: |-
+      return {get_curtain(curtain_component)};
+    covers:
+      - name: Curtain
+        device_class: curtain
+
+
+button:
+- platform: template  # Esphome doesn't support custom buttons yet. Instead uses internal switch
+  name: "Reset Calibration"
+  entity_category: config
+  on_press:
+    - switch.turn_on: _button_reset_calibration
+
+
+binary_sensor:
+- platform: custom
+  lambda: |-
+    auto curtain = get_curtain(curtain_component);
+    return {curtain->cal_sensor, curtain->is_manual};
+
+  binary_sensors:
+    - name: "Calibrated"
+      entity_category: config
+    - name: "Manual Interaction"
+      entity_category: config
+
+
+switch:
+- platform: custom
+  lambda: |-
+    auto curtain = get_curtain(curtain_component);
+    return {curtain->direction_switch, curtain->reset_cal_button};
+
+  switches:
+    - name: "Reverse Direction"
+      entity_category: config
+    - id: "_button_reset_calibration"
+      internal: True  

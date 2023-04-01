@@ -9,3 +9,20 @@ I am currently using a Wireless-Tag WT32-ETH01 to add my motor to my network via
 Add the uart_curtain.h file to a directory where esphome can access it.
 
 See my yaml file for an example config.
+
+
+## Todo Improvements:
+- Check for "confirmation" (and ask again if failed?)
+- Better error checking states
+- One button calibrate (full open-close cycle)
+- Consistent code-style (sorry)
+
+## Credits
+For having already decoded the uart protocol:
+https://github.com/HomeACcessoryKid/AQARA-ZNCLDJ11LM
+
+And for some inspiration for how to use c++, and custom covers in esphome
+https://github.com/iphong/esphome-tuya-curtain
+
+And for the CRC function:
+https://github.com/LacobusVentura/MODBUS-CRC16
